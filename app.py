@@ -17,7 +17,7 @@ df = load_data()
 if df.empty:
     st.stop()  # Arrêter l'exécution si le DataFrame est vide
 
-st.write("Aperçu des données chargées:", df.head())  # Afficher les premières lignes
+st.write("Aperçu des données chargées:", df.head(500))  # Afficher les premières lignes
 
 # 2. Titre du tableau de bord
 st.title("Dashboard Interactif - Analyse des Transactions/FILS KERNEL MULUMBA KANDE")
