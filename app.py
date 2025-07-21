@@ -42,20 +42,12 @@ if 'TransactionStartTime' in df.columns:
         
         st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
 
-# 4. Vérification et remplacement des valeurs négatives
-for col in df.select_dtypes(include=['float64', 'int64']).columns:
-    if (df[col] < 0).any():
-        median_value = df[col].median()  # Calculer la médiane
-        # Remplacer les valeurs négatives par la médiane
-        df[col] = df[col].where(df[col] >= 0, median_value)
-        st.write(f"Valeurs négatives dans la colonne '{col}' remplacées par la médiane : {median_value}")
-
-# 5. Option pour exclure les valeurs négatives
-if st.sidebar.checkbox("Exclure les valeurs négatives", value=True):
-    df = df[df.select_dtypes(include=['float64', 'int64']) >= 0]
+# 4. Option pour exclure les valeurs négatives
+if st.sidebar.checkbox("Exclure les valeurs négatives", value=False):
+    df = df[df['Amount'] >= 0]
     st.write("Données après exclusion des valeurs négatives :", df.head())
 
-# 6. Filtres catégoriels multiples
+# 5. Filtres catégoriels multiples
 colonnes_categorique = df.select_dtypes(include=['object', 'category']).columns.tolist()
 st.write("Colonnes catégorielles détectées:", colonnes_categorique)  # Vérifier les colonnes catégorielles
 
@@ -64,7 +56,7 @@ for col in colonnes_categorique:
     selection = st.sidebar.multiselect(f"{col}", valeurs, default=valeurs)
     df = df[df[col].isin(selection)]
 
-# 7. Sélection pour Graphiques
+# 6. Sélection pour Graphiques
 colonnes_numerique = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
 st.write("Colonnes numériques détectées:", colonnes_numerique)  # Vérifier les colonnes numériques
 
@@ -72,7 +64,7 @@ col_x = st.sidebar.selectbox("Variable X (catégorique)", colonnes_categorique)
 col_y = st.sidebar.selectbox("Variable Y (numérique)", colonnes_numerique)
 col_color = st.sidebar.selectbox("Variable couleur (optionnel)", [None] + colonnes_categorique)
 
-# 8. Affichage de Graphiques
+# 7. Affichage de Graphiques
 
 # a. Évolution temporelle
 if 'TransactionStartTime' in df.columns:
@@ -105,17 +97,17 @@ if col_x:
     fig_pie = px.pie(df, names=col_x, title=f"Répartition de {col_x}")
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# 9. Analyse tabulaire
+# 8. Analyse tabulaire
 st.subheader("Analyse Tabulaire")
 groupby_col = st.selectbox("Grouper par", colonnes_categorique)
 agg_col = st.multiselect("Colonnes à agréger", colonnes_numerique, default=colonnes_numerique[:1])
 if groupby_col and agg_col:
     st.dataframe(df.groupby(groupby_col)[agg_col].agg(['mean', 'sum', 'count']).round(2))
 
-# 10. Données brutes
+# 9. Données brutes
 with st.expander("Aperçu des données"):
     st.dataframe(df)
 
-# 11. Téléchargement des données filtrées
+# 10. Téléchargement des données filtrées
 csv = df.to_csv(index=False).encode('utf-8')
 st.download_button("Télécharger les données filtrées", csv, "transactions_filtrées.csv", "text/csv")
