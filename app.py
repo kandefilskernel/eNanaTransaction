@@ -20,7 +20,7 @@ if df.empty:
 st.write("Aperçu des données chargées:", df.head())  # Afficher les premières lignes
 
 # 2. Titre du tableau de bord
-st.title("Dashboard Interactif - Analyse des Transactions")
+st.title("Dashboard Interactif - Analyse des Transactions/FILS KERNEL MULUMBA KANDE")
 
 # 3. Sidebar - Filtres dynamiques
 st.sidebar.header("Filtres")
