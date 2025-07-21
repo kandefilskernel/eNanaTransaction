@@ -31,11 +31,17 @@ if 'TransactionStartTime' in df.columns:
 
     date_min = df['TransactionStartTime'].min()
     date_max = df['TransactionStartTime'].max()
-    date_range = st.sidebar.date_input("Filtrer par Date", [date_min, date_max])
+    
+    # Correction : Conversion des dates du date_range en datetime
+    date_range = st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])  # Utiliser .date() pour obtenir des objets date
 
     if len(date_range) == 2:
         st.write("Plage de dates sélectionnée:", date_range)  # Afficher la plage de dates sélectionnée
-        df = df[(df['TransactionStartTime'] >= pd.to_datetime(date_range[0])) & (df['TransactionStartTime'] <= pd.to_datetime(date_range[1]))]
+        
+        # Correction : Assurez-vous que les dates sont correctement comparées
+        df = df[(df['TransactionStartTime'] >= pd.to_datetime(date_range[0])) & 
+                 (df['TransactionStartTime'] <= pd.to_datetime(date_range[1]))]
+        
         st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
 
 # 4. Vérification des valeurs négatives
