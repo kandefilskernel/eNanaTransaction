@@ -1,3 +1,9 @@
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 # 1. Chargement des données
 @st.cache_data
 def load_data():
@@ -7,14 +13,14 @@ df = load_data()
 st.write("Aperçu des données chargées:", df.head())  # Afficher les premières lignes
 
 # 2. Titre du tableau de bord
-st.title("Dashboard Interactif - Analyse des Transactions/FILS KERNEL KANDE")
+st.title("Dashboard Interactif - Analyse des Transactions Bancaire FILS KERNEL MULUMBA KANDE")
 
 # 3. Sidebar - Filtres dynamiques
 st.sidebar.header("Filtres")
 
 # Conversion de TransactionStartTime si présente
 if 'TransactionStartTime' in df.columns:
-    df['TransactionStartTime'] = pd.to_datetime(df['TransactionStartTime'], errors='coerce', utc=True)  # Convertir en datetime en UTC
+    df['TransactionStartTime'] = pd.to_datetime(df['TransactionStartTime'], errors='coerce')  # Convertir en datetime, remplacer les erreurs par NaT
     st.write("Aperçu des dates:", df['TransactionStartTime'].describe())  # Vérifier les dates
 
     # Supprimer les lignes avec des dates invalides
@@ -22,7 +28,7 @@ if 'TransactionStartTime' in df.columns:
 
     date_min = df['TransactionStartTime'].min()
     date_max = df['TransactionStartTime'].max()
-    date_range = [pd.to_datetime(date, utc=True) for date in st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])]
+    date_range = [pd.to_datetime(date) for date in st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])]
 
     if len(date_range) == 2:
         st.write("Plage de dates sélectionnée:", date_range)  # Afficher la plage de dates sélectionnée
