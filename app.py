@@ -1,29 +1,20 @@
-import streamlit as st
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
-
-# Configuration de la page
-st.set_page_config(layout="wide")
-
 # 1. Chargement des données
 @st.cache_data
 def load_data():
-    return pd.read_csv("Transactions_data.csv")
+    return pd.read_csv("Transactions_data_complet.csv")
 
 df = load_data()
 st.write("Aperçu des données chargées:", df.head())  # Afficher les premières lignes
 
 # 2. Titre du tableau de bord
-st.title("Dashboard Interactif - Analyse des Transactions")
+st.title("Dashboard Interactif - Analyse des Transactions/FILS KERNEL KANDE")
 
 # 3. Sidebar - Filtres dynamiques
 st.sidebar.header("Filtres")
 
 # Conversion de TransactionStartTime si présente
 if 'TransactionStartTime' in df.columns:
-    df['TransactionStartTime'] = pd.to_datetime(df['TransactionStartTime'], errors='coerce')  # Convertir en datetime, remplacer les erreurs par NaT
+    df['TransactionStartTime'] = pd.to_datetime(df['TransactionStartTime'], errors='coerce', utc=True)  # Convertir en datetime en UTC
     st.write("Aperçu des dates:", df['TransactionStartTime'].describe())  # Vérifier les dates
 
     # Supprimer les lignes avec des dates invalides
@@ -31,16 +22,20 @@ if 'TransactionStartTime' in df.columns:
 
     date_min = df['TransactionStartTime'].min()
     date_max = df['TransactionStartTime'].max()
-    date_range = st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])  # Utiliser .date() pour obtenir des objets date
+    date_range = [pd.to_datetime(date, utc=True) for date in st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])]
 
     if len(date_range) == 2:
         st.write("Plage de dates sélectionnée:", date_range)  # Afficher la plage de dates sélectionnée
         
         # Filtrer les données par date
-        df = df[(df['TransactionStartTime'] >= pd.to_datetime(date_range[0])) & 
-                 (df['TransactionStartTime'] <= pd.to_datetime(date_range[1]))]
+        start_date = date_range[0]
+        end_date = date_range[1]
         
-        st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
+        try:
+            df = df[(df['TransactionStartTime'] >= start_date) & (df['TransactionStartTime'] <= end_date)]
+            st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
+        except Exception as e:
+            st.error(f"Erreur lors du filtrage des données: {e}")
 
 # 4. Option pour exclure les valeurs négatives
 if st.sidebar.checkbox("Exclure les valeurs négatives", value=False):
