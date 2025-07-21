@@ -31,24 +31,24 @@ if 'TransactionStartTime' in df.columns:
 
     date_min = df['TransactionStartTime'].min()
     date_max = df['TransactionStartTime'].max()
-    
-    # Correction : Conversion des dates du date_range en datetime
     date_range = st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])  # Utiliser .date() pour obtenir des objets date
 
     if len(date_range) == 2:
         st.write("Plage de dates sélectionnée:", date_range)  # Afficher la plage de dates sélectionnée
         
-        # Correction : Assurez-vous que les dates sont correctement comparées
+        # Filtrer les données par date
         df = df[(df['TransactionStartTime'] >= pd.to_datetime(date_range[0])) & 
                  (df['TransactionStartTime'] <= pd.to_datetime(date_range[1]))]
         
         st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
 
-# 4. Vérification des valeurs négatives
-valeurs_negatives = df[df.select_dtypes(include=['float64', 'int64']) < 0]
-if not valeurs_negatives.empty:
-    st.write("Valeurs négatives trouvées :")
-    st.dataframe(valeurs_negatives)
+# 4. Vérification et remplacement des valeurs négatives
+for col in df.select_dtypes(include=['float64', 'int64']).columns:
+    if (df[col] < 0).any():
+        median_value = df[col].median()  # Calculer la médiane
+        # Remplacer les valeurs négatives par la médiane
+        df[col] = df[col].where(df[col] >= 0, median_value)
+        st.write(f"Valeurs négatives dans la colonne '{col}' remplacées par la médiane : {median_value}")
 
 # 5. Option pour exclure les valeurs négatives
 if st.sidebar.checkbox("Exclure les valeurs négatives", value=True):
