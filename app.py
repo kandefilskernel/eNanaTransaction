@@ -119,124 +119,36 @@ with st.expander("Aperçu des données"):
 # 10. Téléchargement des données filtrées
 csv = df.to_csv(index=False).encode('utf-8')
 st.download_button("Télécharger les données filtrées", csv, "transactions_filtrées.csv", "text/csv")
-import pandas as pd
-import streamlit as st
-import plotly.express as px
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-# 1. Chargement des données
-@st.cache_data
-def load_data():
-    try:
-        return pd.read_csv("Transactions_data_complet.csv")
-    except FileNotFoundError:
-        st.error("Le fichier 'Transactions_data_complet.csv' n'a pas été trouvé. Veuillez vérifier le chemin.")
-        return pd.DataFrame()  # Retourner un DataFrame vide en cas d'erreur
+# 11. Détection de fraude
+st.sidebar.header("Détection de Fraude")
 
-df = load_data()
-if df.empty:
-    st.stop()  # Arrêter l'exécution si le DataFrame est vide
+# Fonction de détection de fraude
+def detect_fraud(df):
+    # Exemple de critères de détection de fraude
+    seuil_montant = st.sidebar.number_input("Seuil de montant pour la fraude", value=1000.0, min_value=0.0)
+    frequence_max = st.sidebar.number_input("Fréquence maximum de transactions par minute", value=5, min_value=1)
 
-st.write("Aperçu des données chargées:", df.head())  # Afficher les premières lignes
+    # Détection de transactions avec un montant supérieur au seuil
+    transactions_suspectes = df[df['Amount'] > seuil_montant]
 
-# 2. Titre du tableau de bord
-st.title("Dashboard Interactif - Analyse des Transactions")
+    # Détection de transactions fréquentes
+    df['TransactionMinute'] = df['TransactionStartTime'].dt.floor('T')  # Arrondir à la minute
+    frequences = df['TransactionMinute'].value_counts()
+    transactions_frequentes = frequences[frequences > frequence_max].index.tolist()
+    transactions_frequentes_df = df[df['TransactionMinute'].isin(transactions_frequentes)]
 
-# 3. Sidebar - Filtres dynamiques
-st.sidebar.header("Filtres")
+    # Combiner les résultats
+    df_fraude = pd.concat([transactions_suspectes, transactions_frequentes_df]).drop_duplicates()
 
-# Conversion de TransactionStartTime si présente
-if 'TransactionStartTime' in df.columns:
-    df['TransactionStartTime'] = pd.to_datetime(df['TransactionStartTime'], errors='coerce', utc=True)  # Convertir en datetime en UTC
-    st.write("Aperçu des dates:", df['TransactionStartTime'].describe())  # Vérifier les dates
+    return df_fraude
 
-    # Supprimer les lignes avec des dates invalides
-    df = df.dropna(subset=['TransactionStartTime'])
+# Exécuter la détection de fraude
+transactions_fraude = detect_fraud(df)
 
-    date_min = df['TransactionStartTime'].min()
-    date_max = df['TransactionStartTime'].max()
-    date_range = [pd.to_datetime(date, utc=True) for date in st.sidebar.date_input("Filtrer par Date", [date_min.date(), date_max.date()])]
-
-    if len(date_range) == 2:
-        st.write("Plage de dates sélectionnée:", date_range)  # Afficher la plage de dates sélectionnée
-        
-        # Filtrer les données par date
-        start_date = date_range[0]
-        end_date = date_range[1]
-        
-        try:
-            df = df[(df['TransactionStartTime'] >= start_date) & (df['TransactionStartTime'] <= end_date)]
-            st.write("Données après filtrage par date:", df.head())  # Vérifier les données après filtrage
-        except Exception as e:
-            st.error(f"Erreur lors du filtrage des données: {e}")
-
-# 4. Option pour exclure les valeurs négatives
-if st.sidebar.checkbox("Exclure les valeurs négatives", value=False):
-    df = df[df['Amount'] >= 0]
-    st.write("Données après exclusion des valeurs négatives :", df.head())
-
-# 5. Filtres catégoriels multiples
-colonnes_categorique = df.select_dtypes(include=['object', 'category']).columns.tolist()
-st.write("Colonnes catégorielles détectées:", colonnes_categorique)  # Vérifier les colonnes catégorielles
-
-for col in colonnes_categorique:
-    valeurs = df[col].unique().tolist()
-    selection = st.sidebar.multiselect(f"{col}", valeurs, default=valeurs)
-    df = df[df[col].isin(selection)]
-
-# 6. Sélection pour Graphiques
-colonnes_numerique = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-st.write("Colonnes numériques détectées:", colonnes_numerique)  # Vérifier les colonnes numériques
-
-col_x = st.sidebar.selectbox("Variable X (catégorique)", colonnes_categorique)
-col_y = st.sidebar.selectbox("Variable Y (numérique)", colonnes_numerique)
-col_color = st.sidebar.selectbox("Variable couleur (optionnel)", [None] + colonnes_categorique)
-
-# 7. Affichage de Graphiques
-
-# a. Évolution temporelle
-if 'TransactionStartTime' in df.columns:
-    st.subheader("Évolution temporelle")
-    line_data = df.groupby('TransactionStartTime')[col_y].mean().reset_index()
-    fig_line = px.line(line_data, x='TransactionStartTime', y=col_y, title=f"{col_y} moyen au fil du temps")
-    st.plotly_chart(fig_line, use_container_width=True)
-
-# b. Histogramme
-st.subheader("Histogramme interactif")
-fig_hist = px.histogram(df, x=col_y, color=col_color, nbins=30)
-st.plotly_chart(fig_hist, use_container_width=True)
-
-# c. Barplot (moyenne par catégorie)
-st.subheader("Moyenne par catégorie")
-agg_data = df.groupby(col_x)[col_y].mean().reset_index()
-fig_bar = px.bar(agg_data, x=col_x, y=col_y, color=col_x, title=f"Moyenne de {col_y} par {col_x}")
-st.plotly_chart(fig_bar, use_container_width=True)
-
-# d. Heatmap de corrélation
-st.subheader("Heatmap de Corrélation")
-corr = df[colonnes_numerique].corr()
-fig_corr, ax = plt.subplots(figsize=(10, 6))
-sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-st.pyplot(fig_corr)
-
-# e. Pie chart
-if col_x:
-    st.subheader("Répartition des catégories")
-    fig_pie = px.pie(df, names=col_x, title=f"Répartition de {col_x}")
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-# 8. Analyse tabulaire
-st.subheader("Analyse Tabulaire")
-groupby_col = st.selectbox("Grouper par", colonnes_categorique)
-agg_col = st.multiselect("Colonnes à agréger", colonnes_numerique, default=colonnes_numerique[:1])
-if groupby_col and agg_col:
-    st.dataframe(df.groupby(groupby_col)[agg_col].agg(['mean', 'sum', 'count']).round(2))
-
-# 9. Données brutes
-with st.expander("Aperçu des données"):
-    st.dataframe(df)
-
-# 10. Téléchargement des données filtrées
-csv = df.to_csv(index=False).encode('utf-8')
-st.download_button("Télécharger les données filtrées", csv, "transactions_filtrées.csv", "text/csv")
+# Afficher les résultats de la détection de fraude
+if not transactions_fraude.empty:
+    st.subheader("Transactions suspectes")
+    st.dataframe(transactions_fraude)
+else:
+    st.write("Aucune transaction suspecte détectée.")
